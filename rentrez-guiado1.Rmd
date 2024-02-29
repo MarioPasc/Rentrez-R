@@ -40,11 +40,55 @@ app_genes
 ```
 Podemos comprobar entonces que el gen con el id 351 se trata de nuestro gen APP de la beta amiloide para la especie homo sapiens. 
 
+### Cromosoma y posición
+
+```{r}
+# Obtener el resumen del gen usando su ID
+gene_summary <- entrez_summary(db="gene", id=351)
+
+# Extraer el cromosoma y la posición cromosómica del gen
+chromosome <- gene_summary$chromosome
+genomic_pos <- paste(gene_summary$genomicinfo$chrstart, "-", gene_summary$genomicinfo$chrstop, sep="")
+
+# Imprimir el cromosoma y la posición
+print(paste("Cromosoma:", chromosome))
+print(paste("Posición en el cromosoma:", genomic_pos))
+```
 
 
+### ¿Cuántas variantes clínicas hay para este gen?
 
+Aquí se nos pregunta básicamente por la cantidad de referencias cruzadas que hay para el gen. Hay varias formas de hacer esto, una de ellas es apoyándonos en `entrez_db_searchable()`. 
 
+```{r}
 
+search <- entrez_search(dbfrom = "gene", 
+              db = "clinvar",
+              term = "351[GID]",
+              retmax = 5000)
+# summary(search)
+print(paste("Número de variantes clínicas asociadas al gen: ", summary(search)[1]))
+
+```
+En este caso podemos acceder al elemento "length" del resumen como si fuer aun índice de una lista. 
+
+### ¿Cuál es su secuencia FASTA?
+Lo haremos para los genes 351 y 11647. 
+```{r}
+gene_ids <- c(351, 11647)
+
+# Vamos a buscar todas las referencias a estos genes
+linked_ids <- entrez_link(dbfrom = "gene", 
+                          db = "nuccore", 
+                          id = gene_ids)
+# Podemos obtener los id's de las secuencias fasta
+id_fasta <- linked_ids$links$gene_nuccore_refseqrna
+# Finalmente buscamos el recurso
+fasta <- entrez_fetch(db = "nuccore", 
+                      id = id_fasta, 
+                      rettype = "fasta")
+fasta
+```
 
 
 
