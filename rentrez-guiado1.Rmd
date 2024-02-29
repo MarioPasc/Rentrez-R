@@ -1,0 +1,72 @@
+---
+author: "Mario Pascual González"
+title: "Rentrez. Ejercicios guiados"
+---
+
+## Ejercicio 1. Gen APP
+
+Se nos pide realizar una búsqueda utilizando rentrez para un gen denominado APP de la "Amyloid Beta Precursor". Se pide que la búsqueda se haga para la especie "Homo Sapiens". La búsqueda debe responder a estas preguntas:
+
+1. ¿Cuál es la ID del gen APP?
+2. ¿En qué cromosome y posición se encuentra?
+3. ¿Cuántas variantes clínicas hay para este gen?
+4. ¿Cuál es su secuencia FASTA?
+
+### ID del gen APP
+
+Comenzaremos buscando información sobre las opciones que marcan que debe ser parte del precursor beta amiloide y sobre la especie:
+
+```{r}
+library(rentrez)
+entrez_db_searchable("gene")
+```
+Como podemos observar, el campo `TITL` corresponde al nombre del gen, mientras que el campo `ORGN` nos ayuda a especificar la especie. Con esto, podemos realizar la consulta:
+
+```{r}
+beta_amiloide <- entrez_search(db = "gene", 
+                               term = "Amyloid Beta Precursor[TITL] AND Homo sapiens[ORGN]")
+summary(beta_amiloide)
+```
+Como podemos observar, hemos obtenido 19 coincidencias para genes de la beta amiloide. Podemos comprobar cuál de estos es nuestro gen APP:
+
+```{r}
+
+app_genes <- beta_amiloide$ids[
+  sapply(beta_amiloide$ids, function(id) {
+    "APP" == entrez_summary(db = "gene", 
+                            id = id)$name
+})]
+app_genes
+```
+Podemos comprobar entonces que el gen con el id 351 se trata de nuestro gen APP de la beta amiloide para la especie homo sapiens. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
