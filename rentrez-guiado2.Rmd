@@ -1,0 +1,124 @@
+---
+author: "Mario Pascual González"
+title: "Rentrez. Ejercicio guiado 2"
+---
+
+## Enunciado
+
+El gen BRCA1 (Breast Cancer 1) es conocido por su asociación con el riesgo de cáncer de mama y ovario. Las mutaciones en este gen pueden indicar una alta predisposición a desarrollar estas formas de cáncer. Utilizando los conocimientos adquiridos sobre rentrez, resuelve las siguientes cuestiones:
+
+1. Identificación del Gen BRCA1: ¿Cuál es el ID de Entrez para el gen BRCA1 en Homo sapiens?
+2. Localización Cromosómica y Genética: ¿En qué cromosoma se encuentra el gen BRCA1 y cuáles son sus coordenadas genéticas?
+3. Variabilidad Genética: ¿Cuántas variantes clínicas asociadas con el gen BRCA1 están registradas en ClinVar?
+4. Análisis de Tránscritos: ¿Cuántos tránscritos conocidos tiene el gen BRCA1? Enumera sus IDs de acceso.
+5. Secuenciación y Archivo: Obtén la secuencia FASTA para el tránscrito principal del gen BRCA1. Guarda esta secuencia en un archivo .fasta y prepárate para compartirlo como se indique.
+
+## Resolución
+```{r}
+library(rentrez)
+```
+### Primera pregunta. ID del gen
+
+Primero tenemos que encontrar los nombres de los parámetros que podemos utilizar para buscar información sobre genes. 
+```{r}
+entrez_db_searchable("gene")
+```
+
+Se dice que debemos realizar la búsqueda teniendo en cuenta el nombre del gen, BRCA1, y la especie, Homo Sapiens. 
+
+```{r}
+search <- entrez_search(db = "gene", 
+                        term = "BRCA1[TITL] AND Homo sapiens[ORGN]",
+                        retmax = 4000)
+summary(search)
+```
+Hemos utilizado el parámetro `retmax = 4000` para no tener problemas con la cantidad de información devuelta. Por otra parte, podemos observar que hemos recibido un total de 37 ID's distintos, sin embargo, solo buscamos los que tengan el nombre exacto BRCA1.
+
+```{r}
+target <- search$ids[
+  sapply(search$ids, function(this_id) { 
+    "BRCA1" == entrez_summary(db = "gene", id = this_id)$name 
+    }
+  )
+]
+target
+```
+
+Como podemos observar por la búsqueda realizada, el gen con ID 672 es el que contiene nuestros criterios de búsqueda:
+
+```{r}
+bcra1 <- entrez_summary(db = "gene", 
+                        id = 672)
+bcra1
+```
+
+### Pregunta 2. Cromosoma y posición
+
+```{r}
+print(paste("Cromosoma: ", bcra1$genomicinfo$chrloc))
+print(paste("Posición de inicio en el cromosoma: ", bcra1$genomicinfo$chrstart))
+print(paste("Posición de final en el cromosoma: ", bcra1$genomicinfo$chrstop))
+print(paste("Longitud del cromosoma: ", bcra1$genomicinfo$chrstart - bcra1$genomicinfo$chrstop))
+```
+
+### Pregunta 3. Variantes clínicas
+
+Podemos buscar el nombre de la base de datos 'clinvar' buscando en las referencias cruzadas que tiene 'gene':
+
+```{r}
+entrez_db_links(db = "gene")
+```
+Una vez hemos identificado que el nombre de la base de datos que necesitamos es 'clinvar', ahora se debe proceder a buscar los términos de búsqueda que se pueden usar en esta BD:
+```{r}
+entrez_db_searchable("clinvar")
+```
+
+podemos ahora sí encontrar el número de refenrencias cruzadas que existen.
+
+```{r}
+search_CR <-  entrez_search(dbfrom = "gene", 
+                            db = "clinvar", 
+                            term = "672[GID]", 
+                            retmax = 14481)
+
+summary_CR <- summary(search_CR)
+print(paste("Numero de variantes clinicas asociadas a BRCA1: ", summary_CR[1] ))
+```
+
+### Sencuencia FASTA
+
+Haremos una búsqueda en nuccore para el id de nuestro gen de interés. Así obtendremos las bases de datos que continen la información de su fichero FASTA. 
+
+```{r}
+link <- entrez_link(dbfrom = "gene", 
+            db = "nuccore", 
+            id = 672)
+summary(link)
+link$links
+```
+
+```{r}
+linked_transcript <- link$links$gene_nuccore_refseqrna
+
+if(length(linked_transcript) > 10) {
+  fasta <- entrez_fetch(db = "nuccore", 
+                        id = linked_transcript[1:10],  
+                        rettype = "fasta")
+  write(fasta, file = "FastaR-672.fasta")
+} else {
+  message("No linked transcript IDs found.")
+}
+
+```
+
+Se ha hecho un `if` ya que si la respuesta es demasiado grande, R markdown no permite tiempos tan largos de generación y salta un error. 
+
+Podemos visualizar el fichero fasta en la terminal bash de linux tal que:
+
+`cat FastaR-672.fasta | head`
+
+Podemos incluso contar el número de lecturas del fichero utilizando 
+
+`cat FastaR-672.fasta | grep -c '>'`
+
+
