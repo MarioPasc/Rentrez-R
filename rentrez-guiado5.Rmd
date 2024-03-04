@@ -1,0 +1,116 @@
+---
+title: "Ejercicio guiado rentrez 5 y resumen base de datos"
+author: "Mario Pascual González"
+date: "04/03/2024"
+---
+
+## Resumen Base de Datos de Rentrez
+
+| Base de Datos | Identificador `rentrez` | Descripción |
+|---------------|-----------------------------|-------------|
+| ClinVar       | `clinvar`                   | Recopila información sobre variantes genéticas y sus efectos en la salud humana. |
+| Nucleotide    | `nuccore`                   | Contiene secuencias de nucleótidos y sus anotaciones correspondientes. |
+| PubMed        | `pubmed`                    | Base de datos de referencias y resúmenes de artículos de investigación en ciencias de la vida y biomédicas. |
+| OMIM          | `omim`                      | Catálogo de enfermedades humanas genéticas y variantes genéticas. Proporciona información detallada sobre genes y trastornos genéticos. |
+| Gene          | `gene`                      | Recopila información sobre la estructura y función de todos los genes conocidos (humanos y de otros organismos). |
+| Protein       | `protein`                   | Almacena secuencias de proteínas y descripciones de su función y estructura. |
+| dbSNP         | `snp`                       | Base de datos de variaciones de nucleótidos simples y otras secuencias relacionadas con la variación genética. |
+| GEO Profiles  | `geoprofiles`               | Contiene datos de expresión génica y perfiles moleculares derivados de análisis de microarrays y secuenciación de alto rendimiento. |
+
+
+## Enunciado
+
+### Ejercicio: Análisis de la Proteína p53 y su Rol en el Cáncer
+
+La proteína p53, codificada por el gen TP53, es fundamental para la regulación del ciclo celular y actúa como un supresor tumoral. Las mutaciones en esta proteína están vinculadas a numerosos tipos de cáncer. Utilizando los conocimientos adquiridos sobre `rentrez`, explora la información disponible en las bases de datos de NCBI sobre la proteína p53:
+
+1. **Identificación de la Proteína p53**: ¿Cuál es el ID de Entrez para la proteína p53 en Homo sapiens?
+   
+
+2. **Estructura de la Proteína**: ¿Cuál es la estructura 3D disponible para la proteína p53? Busca en la base de datos `Structure`.
+   
+
+3. **Variantes Genéticas**: ¿Cuántas variantes clínicas asociadas con la proteína p53 están registradas en ClinVar?
+   
+
+4. **Interacciones Proteicas**: ¿Con qué otras proteínas interactúa la p53? Encuentra información en la base de datos `Protein`.
+   
+
+5. **Exploración de Publicaciones**: Encuentra los cinco artículos más recientes sobre la proteína p53 en PubMed.
+   
+
+6. **Secuenciación y Archivo**: Obtén la secuencia FASTA para la proteína p53. Guarda esta secuencia en un archivo `.fasta`.
+   
+### Primer apartado
+
+```{r, warning=FALSE}
+library(rentrez)
+
+entrez_db_searchable("protein")
+```
+
+```{r}
+search_p53 <- entrez_search(db="protein", term="p53[PROT] AND Homo sapiens[ORGN]", retmax=100)
+print(paste("Número de ID proteínas p53: ", search_p53$count))
+
+# Opción más eficiente sería revisar un subconjunto de IDs y sus títulos
+summaries <- entrez_summary(db="protein", id=search_p53$ids[1:min(length(search_p53$ids), 10)])
+# Filtrar basado en una comprobación menos estricta o análisis de los resúmenes obtenidos
+id_p53 <- sapply(summaries, function(s) ifelse(grepl("p53", s$title) && grepl("Homo sapiens", s$title), s$uid, NA))
+id_p53 <- id_p53[!is.na(id_p53)]
+id_p53
+```
+Es normal que se devuelvan varios ID's ya que: 
+
+1. **Diversidad de Secuencias**: La proteína p53 puede tener múltiples variantes de splicing alternativo, lo que resulta en varias secuencias proteicas distintas. Por lo tanto, podrías encontrar múltiples entradas para la proteína p53 que representen estas diferentes variantes.
+
+2. **Diferentes Organismos**: Aunque hayas filtrado por "Homo sapiens", la popularidad y la relevancia de la proteína p53 en la investigación pueden llevar a múltiples entradas incluso dentro de la misma especie, incluyendo diferentes estudios, experimentos, o anotaciones de la misma proteína.
+
+3. **Variantes y Mutaciones**: Además de las variantes naturales, la base de datos puede contener entradas específicas para variantes mutantes de p53 que han sido estudiadas en contextos específicos, como diferentes tipos de cáncer. Estas variantes mutantes son de gran interés para la investigación y pueden tener sus propias entradas.
+
+4. **Secuencias Parciales o Fragmentos**: Algunas entradas pueden representar secuencias parciales o fragmentos de la proteína p53 que se han secuenciado o estudiado de manera independiente.
+
+Así que nos quedaremos con el primero para resolver el ejercicio. 
+
+```{r}
+search_p53 <- entrez_search(db="protein", term="p53[Protein Name] AND Homo sapiens[Organism]")
+id_p53 <- search_p53$ids[1]
+```
+### Apartado 2
+
+```{r}
+links_structure <- entrez_link(dbfrom="protein", db="structure", id=id_p53)
+structure_ids <- links_structure$links$protein_structure
+summary_structure <- entrez_summary(db="structure", id=structure_ids[1])
+print(summary_structure$title)
+
+```
+
+### Apartado 4
+
+```{r}
+links_interaction <- entrez_link(dbfrom="protein", db="protein", id=search_p53$ids[1], linkname="protein_protein")
+protein_interaction_ids <- links_interaction$links$protein_protein
+print(protein_interaction_ids)
+```
+
+### Apartado 5
+
+```{r}
+articles_p53 <- entrez_search(db="pubmed", term="p53[Protein Name]", retmax=5)
+summaries <- entrez_summary(db="pubmed", id=articles_p53$ids)
+lapply(summaries, function(s) print(s$title))
+```
+
+### Apartado 6
+
+```{r}
+fasta_p53 <- entrez_fetch(db="protein", id=search_p53$ids[1], rettype="fasta", retmode="text")
+writeLines(fasta_p53, "p53_protein.fasta")
+```
+
+
+
+
+
+
