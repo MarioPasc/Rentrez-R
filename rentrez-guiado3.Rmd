@@ -1,0 +1,102 @@
+---
+title: "Rentrez. Ejercicio guiado 3"
+author: "Mario Pascual González"
+---
+
+
+## Enunciado 
+
+La enfermedad de Parkinson es un trastorno neurodegenerativo progresivo que afecta el movimiento. Caracterizado por síntomas como temblores, rigidez, y pérdida de movimiento, su investigación es crucial para entender mejor sus causas y encontrar tratamientos efectivos. Utilizando los conocimientos adquiridos sobre rentrez, resuelve las siguientes cuestiones utilizando la base de datos de PUBMED:
+
+1. Búsqueda de Literatura: Realiza una búsqueda para encontrar artículos publicados en los últimos 5 años sobre la enfermedad de Parkinson. ¿Cuántos artículos se han publicado?
+2. Análisis de Publicaciones: Selecciona los 5 primeros artículos retornados por tu búsqueda. Para cada uno, proporciona el título, el año de publicación, y la lista de autores.
+3. Enfoque en Tratamientos: Ajusta tu búsqueda para incluir artículos que se centren específicamente en tratamientos para la enfermedad de Parkinson. ¿Cuántos artículos se encuentran bajo esta categoría en los últimos 5 años?
+4. Revisión de un Artículo Específico: Elige uno de los artículos sobre tratamientos y proporciona un breve resumen del mismo. Si es posible, incluye información sobre el tipo de tratamiento estudiado y las conclusiones principales.
+5. Exploración de Referencias: Para el artículo que elegiste en el paso anterior, identifica y enumera al menos 3 referencias citadas en el mismo.
+
+## Resolución
+
+### Cantidad de artículos publicados
+
+Nos piden que busquemos artículos que *hayan sido publicados en los últimos 5 años* y que traten sobre la *enfermedad de Parkinson* en *PubMed*. Para poder hacer una búsqueda específica de estos términos primero buscaremos los parámetros que tiene la base de datos PubMed para estas especificaciones. 
+
+```{r}
+library(rentrez)
+entrez_db_searchable("pubmed")
+```
+Podemos observar que las opciones que más encajan con nuestras especificaciones podrían ser `TIAB` para especificar palabras en el título y abstract, y, `PDAT`, que sirve para indicar la fecha de publicación. 
+
+```{r}
+
+search <- entrez_search(db = "pubmed", 
+              term = "(2019[PDAT] OR 2020[PDAT] OR 2021[PDAT] OR 2022[PDAT] OR 2023[PDAT]) AND
+                      Parkinson's Disease[TIAB]",
+              retmax = 10000)
+
+summary(search)
+print(paste("Cantidad de artículos: ", search$count))
+```
+
+Podemos observar entonces que hay un total de 36940 artículos que cumplen las condiciones. 
+
+### Análisis de artículos
+
+Primero debemos conseguir las id's de los 5 primeros artículos. Luego, presentaremos la información en forma de data.frame
+
+```{r}
+id_articulos <- search$ids[1:5]
+titulos <- c()
+fechas <- c()
+autores <- c()
+
+# Rellenar las listas con información de cada artículo
+for(i in seq_along(id_articulos)) {
+  resumen <- tryCatch({
+    entrez_summary(db = "pubmed", id = id_articulos[i])
+  }, error = function(e) NULL)
+  
+  if (!is.null(resumen)) {
+    titulos[[i]] <- resumen$title
+    fechas[[i]] <- resumen$pubdate
+    autores[[i]] <- paste(resumen$authors[1], collapse = ", ")
+  } else {
+    titulos[[i]] <- NA
+    fechas[[i]] <- NA
+    autores[[i]] <- NA
+  }
+}
+
+# Crear un dataframe
+articulos_df <- data.frame(
+  id = id_articulos,
+  titulos = unlist(titulos),
+  fechas = unlist(fechas),
+  autores = unlist(autores),
+  stringsAsFactors = FALSE 
+  )
+
+articulos_df
+```
+
+### Tratamientos
+
+```{r}
+current_year <- format(Sys.Date(), "%Y")
+start_year <- as.numeric(current_year) - 4  # Los últimos 5 años incluyendo el año actual
+
+# Construir la cadena de búsqueda para artículos sobre tratamientos para la enfermedad de Parkinson
+search_term_treatments <- paste0("(\"", start_year, "\"[PDAT] : \"", current_year, "\"[PDAT]) AND (Parkinson's Disease[TIAB] AND (treatment[TIAB] OR therapy[TIAB] OR management[TIAB]))")
+
+# Realizar la búsqueda en PubMed
+search_results_treatments <- entrez_search(db="pubmed", term=search_term_treatments, use_history = TRUE)
+
+# Imprimir la cantidad de artículos encontrados que se centran en tratamientos
+print(paste("Cantidad de artículos sobre tratamientos para la enfermedad de Parkinson publicados en los últimos 5 años: ", search_results_treatments$count))
+
+```
+
+
+
+
+
+

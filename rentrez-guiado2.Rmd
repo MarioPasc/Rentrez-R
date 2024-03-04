@@ -1,6 +1,6 @@
 ---
-author: "Mario Pascual González"
 title: "Rentrez. Ejercicio guiado 2"
+author: "Mario Pascual González"
 ---
 
 ## Enunciado

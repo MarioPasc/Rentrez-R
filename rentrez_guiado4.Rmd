@@ -1,0 +1,143 @@
+---
+title: "Rentrez. Ejercicio guiado 4"
+author: "Mario Pascual González"
+output: pdf_document
+---
+
+## Enunciado: Estudio de la Fibrosis Quística
+
+La Fibrosis Quística es una enfermedad genética hereditaria que afecta principalmente a los pulmones y al sistema digestivo. Es causada por mutaciones en el gen CFTR (Cystic Fibrosis Transmembrane Conductance Regulator). Usando los recursos aprendidos de `rentrez`, resuelve las siguientes cuestiones relacionadas con el gen CFTR y la enfermedad. Asegúrate de incluir el código utilizado para obtener cada respuesta.
+
+### Primer ejercicio
+
+1. **Identificación del Gen CFTR**
+   - Encuentra el ID de Entrez para el gen CFTR en la especie Homo Sapiens. 
+
+#### Resolución
+
+Primero debemos encontrar el parámetro de la base de datos `gene` que hace referencia al tipo de gen
+
+```{r}
+library(rentrez)
+entrez_db_searchable("gene")
+```
+Se utilizará `TITL` para el nombre del gen, mientras que se usará `ORGN` para especificar la especie. 
+
+```{r}
+search <- entrez_search(db = "gene", 
+                        term = "CFTR[TITL] AND Homo Sapiens[ORGN]",
+                        retmax = 100)
+summary(search)
+print(paste("Tenemos un total de", search$count, "ids para el gen CFTR", sep = " "))
+```
+Ahora debemos encontrar el que se llama exactamente CFTR.  
+
+```{r}
+ids_gen_correcto <- search$ids[sapply(search$ids, function(id) {"CFTR" == entrez_summary(db = "gene", id = id)$name })]
+print(paste("ID del gen que buscábamos: ", ids_gen_correcto))
+```
+
+### Ejercicio 2
+
+2. **Localización Cromosómica y Coordenadas Genéticas**
+   - Determina en qué cromosoma se encuentra el gen CFTR y sus coordenadas genéticas exactas.
+
+#### Resolución
+
+```{r}
+summ_gen <- entrez_summary(db = "gene", 
+                           id = ids_gen_correcto)
+print(paste("Cromosoma:", summ_gen$genomicinfo$chrloc))
+print(paste("Coordenadas de inicio dentro del cromosoma:", summ_gen$genomicinfo$chrstart))
+print(paste("Coordenadas de fin dentro del cromosoma:", summ_gen$genomicinfo$chrstop))
+```
+
+### Ejercicio 3
+
+3. **Variantes Clínicas Asociadas**
+   - Calcula cuántas variantes clínicas relacionadas con la Fibrosis Quística están registradas en ClinVar para el gen CFTR.
+
+#### Resolución
+
+```{r}
+links <- entrez_link(dbfrom = "gene",
+                     db = "clinvar", 
+                     id = ids_gen_correcto)
+print(paste("Hay asociadas", length(links$links$gene_clinvar), "variantes clínicas registadas en clinvar del gen CFTR", sep = " "))
+```
+
+### Ejercicio 4
+
+4. **Investigación de Tránscritos**
+   - Identifica cuántos tránscritos del gen CFTR están disponibles en la base de datos de NCBI.
+
+#### Resoluciión
+
+```{r}
+busq <- entrez_link(dbfrom = "gene", 
+            db = "nuccore",
+            id = ids_gen_correcto)
+print(paste("Cantidad de tránscritos:", length(busq$links$gene_nuccore), sep = " "))
+```
+
+### Ejercicio 5
+
+5. **Secuenciación y Análisis**
+   - Recupera la secuencia FASTA de los tránscritos del gen CFTR.
+   
+#### Resolución
+
+```{r}
+link_fasta <- busq$links$gene_nuccore_refseqrna
+
+fasta <-entrez_fetch(db = "nuccore", 
+             id = link_fasta,
+             rettype = "FASTA")
+write(fasta, file = "/home/mario/Universidad/Proyectos-R/Rentrez-R/FastaR-1080.fasta")
+```
+
+Podemos ver los contenidos de este fichero fasta tal que:
+
+`cd /home/mario/Universidad/Proyectos-R/Rentrez-R/FastaR-1080.fasta`
+`cat FastaR-1080.fasta`
+
+Y contar la cantidad de lecturas del gen tal que:
+
+`cat FastaR-1080.fasta | grep -c ">"`
+
+### Ejercicio 6
+
+6. **Exploración de Publicaciones**
+   - Encuentra los cinco artículos más recientes sobre la Fibrosis Quística relacionados con el gen CFTR en PubMed.
+
+#### Resolución
+
+Primero tendremos que encontrar la opción que tiene pubmed para filtrar por los artículos que contengan información sobre el gen CFTR. 
+
+```{r}
+entrez_db_searchable("pubmed")
+```
+
+Ahora podemos realizar la búsqueda:
+
+```{r}
+search_pubmed <- entrez_search(db = "pubmed", 
+                               term = "CFTR[TIAB] AND (2024[PDAT])",
+                               retmax = 5)
+
+summary(search_pubmed)
+print(paste("Cantidad de artículos del 2024 sobre el gen CFTR:", search_pubmed$count))
+
+if(length(search_pubmed$ids) > 0) {
+  summaries <- entrez_summary(db="pubmed", id=search_pubmed$ids)
+  
+  # Imprimir títulos y autores (o cualquier información relevante) de los artículos
+  lapply(summaries, function(s) {
+    cat("Título:", s$title, "\n")
+    cat("Autores:", paste(s$authors, collapse=", "), "\n\n")
+  })
+}
+
+```
+
+
